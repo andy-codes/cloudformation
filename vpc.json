@@ -1,0 +1,68 @@
+{
+    "AWSTemplateFormatVersion" : "2010-09-09",
+    "Resources" : {
+        "customVPC" : {
+            "Type" : "AWS::EC2::VPC",
+            "Properties" : {
+                "CidrBlock" : "10.0.0.0/24",
+                "EnableDnsSupport" : "true",
+                "EnableDnsHostnames" : "true",
+                "InstanceTenancy" : "default",
+                "Tags" : [ {"Key" : "Name", "Value" : "customVPC"} ]
+            }
+        },
+		"customSubnetPublic" : {
+			"Type" : "AWS::EC2::Subnet",
+			"Properties" : {
+				"CidrBlock" : "10.0.0.0/25",
+				"MapPublicIpOnLaunch" : "true",
+				"Tags" : [{"Key" : "Name", "Value" : "customPublicSubnet"}],
+				"VpcId" : {"Ref" : "customVPC"}
+			}
+		},
+      "customSubnetPrivate" : {
+			"Type" : "AWS::EC2::Subnet",
+			"Properties" : {
+				"CidrBlock" : "10.0.0.128/25",
+				"MapPublicIpOnLaunch" : "true",
+				"Tags" : [{"Key" : "Name", "Value" : "customPrivateSubnet"}],
+				"VpcId" : {"Ref" : "customVPC"}
+			}
+		},
+      "customIG" : {
+          "Type" : "AWS::EC2::InternetGateway",
+          "Properties" : {
+              "Tags" : [{"Key" : "Name", "Value" : "customIG"}]
+          }
+      },
+      "customGatewayAttachment" : {
+          "Type" : "AWS::EC2::VPCGatewayAttachment",
+          "Properties" : {
+            "InternetGatewayId" : {"Ref" : "customIG"},
+            "VpcId" : {"Ref" : "customVPC"}
+          }
+      },
+      "customRouteTable" : {
+        "Type" : "AWS::EC2::RouteTable",
+        "Properties" : {
+          "VpcId" : {"Ref" : "customVPC"},
+          "Tags" : [{"Key" : "Name", "Value" : "customRouteTable"}]
+        }
+      },
+      "customRouteTableRoute" : {
+        "Type" : "AWS::EC2::Route",
+        "Properties" : {
+          "DestinationCidrBlock" : "0.0.0.0/0",
+          "GatewayId" : {"Ref" : "customIG"},
+          "RouteTableId" : {"Ref" : "customRouteTable"}
+        }
+      },
+      "customSubnetRouteTableAssociation" : {
+        "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+        "Properties" : {
+          "RouteTableId" : {"Ref" : "customRouteTable"},
+          "SubnetId" : {"Ref" : "customSubnetPublic"}
+        }
+      }
+    }
+}
