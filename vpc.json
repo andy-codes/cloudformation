@@ -100,7 +100,7 @@
             "NetworkInterfaces" : [ { "NetworkInterfaceId" : { "Ref" : "Ec2NetworkInterface" }, "DeviceIndex" : "" }]
 
             },
-          "DependsOn" : "customGatewayAttachment"
+          "DependsOn" : ["customGatewayAttachment", "customVPC", "customSubnetPublic"]
         },
 
       "Ec2NetworkInterface" : {
@@ -109,7 +109,7 @@
             "Description" : "The network interface for the EC2 Instance",
             "SubnetId" : "customSubnetPublic"
         },
-        "DependsOn" : "customVPC"
+        "DependsOn" :  ["customGatewayAttachment", "customVPC", "customSubnetPublic"]
       }
   }
 
