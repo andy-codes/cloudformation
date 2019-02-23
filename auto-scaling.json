@@ -1,0 +1,69 @@
+{
+    "AWSTemplateFormatVersion" : "2010-09-09",
+
+
+  "Parameters" : {
+    "Ec2InstanceType" : {
+      "Description" : "EC2 Instance Type - e.g. t2.micro  ",
+      "Type" : "String",
+      "Default" : "t2.micro"
+
+    },
+
+    "Ec2KeyName" : {
+      "Description" : "EC2 Key Name",
+      "Type": "String",
+      "Default" : "test"
+    },
+
+    "Ec2AmiImageId" : {
+      "Description" : "Input the AMI ID you require",
+      "Type" : "String",
+      "Default" : "ami-e1768386"
+
+    }
+  },
+
+
+
+  "Resources" : {
+
+        "autoScalingGroup" : {
+          "Type" : "AWS::AutoScaling::AutoScalingGroup",
+          "Properties" : {
+            "AutoScalingGroupName" : "test-autoscaling-group",
+            "AvailabilityZones" : [ "eu-west-2b"],
+            "Cooldown" : "30",
+            "DesiredCapacity" : "1",
+            "HealthCheckGracePeriod" : 10,
+            "HealthCheckType" : "EC2",
+            "LaunchTemplate" : LaunchTemplateSpecification,
+            "LifecycleHookSpecificationList" : [ LifecycleHookSpecification, ... ],
+            "LoadBalancerNames" : [ String, ... ],
+            "MaxSize" : String,
+            "MetricsCollection" : [ MetricsCollection, ... ],
+            "MinSize" : String,
+            "MixedInstancesPolicy" : MixedInstancesPolicy,
+            "NotificationConfigurations" : [ NotificationConfiguration, ... ],
+            "PlacementGroup" : String,
+            "ServiceLinkedRoleARN" : String,
+            "Tags" : [ TagProperty, ... ],
+            "TargetGroupARNs" : [ String, ... ],
+            "TerminationPolicies" : [ String, ... ],
+            "VPCZoneIdentifier" : [ String, ... ]
+          },
+          "DependsOn": "launchTemplate"
+        },
+
+
+    "launchTemplate": {
+      "Type" : "AWS::EC2::LaunchTemplate",
+      "Properties" : {
+        "LaunchTemplateName" : "pms_template",
+        "LaunchTemplateData" : LaunchTemplateData
+      }
+
+    }
+  }
+
+}
