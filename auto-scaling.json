@@ -154,6 +154,26 @@
       }
     },
 
+    "ScalingPolicyScaleOutTargetTracking": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "AdjustmentType": "ChangeInCapacity",
+        "AutoScalingGroupName": {
+          "Ref": "AutoScalingGroup"
+        },
+        "PolicyType": "TargetTrackingScaling",
+        "Cooldown": "300",
+        "TargetTrackingConfiguration" : {
+
+            "DisableScaleIn" : false,
+            "PredefinedMetricSpecification" : {
+                        "PredefinedMetricType" : "ASGAverageCPUUtilization"
+                      },
+            "TargetValue" : "50.00"
+          }
+      }
+    },
+
     "ScalingPolicyScaleIn": {
       "Type": "AWS::AutoScaling::ScalingPolicy",
       "Properties": {
@@ -170,7 +190,7 @@
     "ScaleOutAlarm": {
       "Type": "AWS::CloudWatch::Alarm",
       "Properties": {
-        "ActionsEnabled": true,
+        "ActionsEnabled": false,
         "AlarmActions": [
           {"Ref": "ScalingPolicyScaleOut"}
         ],
