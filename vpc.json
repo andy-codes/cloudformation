@@ -1,6 +1,32 @@
 {
     "AWSTemplateFormatVersion" : "2010-09-09",
-    "Resources" : {
+
+
+  "Parameters" : {
+    "Ec2InstanceType" : {
+      "Description" : "EC2 Instance Type - e.g. t2.micro  ",
+      "Type" : "String",
+      "Default" : "t2.micro"
+
+    },
+
+    "Ec2KeyName" : {
+      "Description" : "EC2 Key Name",
+      "Type": "String",
+      "Default" : "test"
+    },
+
+    "Ec2AmiImageId" : {
+      "Description" : "Input the AMI ID you require",
+      "Type" : "String",
+      "Default" : "ami-e1768386"
+
+    }
+  },
+
+
+
+  "Resources" : {
         "customVPC" : {
             "Type" : "AWS::EC2::VPC",
             "Properties" : {
@@ -63,6 +89,28 @@
           "RouteTableId" : {"Ref" : "customRouteTable"},
           "SubnetId" : {"Ref" : "customSubnetPublic"}
         }
+      },
+
+      "customEC2" : {
+        "Type" : "AWS::EC2::Instance",
+        "Properties" : {
+            "KeyName" : { "Ref" : "Ec2KeyName"},
+            "SubnetId" : {"Ref": "customSubnetPublic"},
+            "ImageId" : {"Ref" : "Ec2AmiImageId"},
+            "NetworkInterfaces" : [ { "NetworkInterfaceId" : { "Ref" : "Ec2NetworkInterface" }, "DeviceIndex" : "" }]
+
+            },
+          "DependsOn" : ["customGatewayAttachment", "customVPC", "customSubnetPublic"]
+        },
+
+      "Ec2NetworkInterface" : {
+        "Type" : "AWS::EC2::NetworkInterface",
+        "Properties" : {
+            "Description" : "The network interface for the EC2 Instance",
+            "SubnetId" : "customSubnetPublic"
+        },
+        "DependsOn" :  ["customGatewayAttachment", "customVPC", "customSubnetPublic"]
       }
-    }
+  }
+
 }
