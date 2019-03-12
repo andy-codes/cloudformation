@@ -1,0 +1,131 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  AutoScalingCoolDown:
+    Description: AutoScaling Cool Down
+    Type: String
+    Default: '30'
+  AutoScalingHealthCheckGracePeriod:
+    Description: Time in seconds before autoscaling starts checking EC2 Health
+    Type: Integer
+    Default: 600
+  LifeCycleHookName:
+    Description: Name for the AutoScaling LifeCycle Hook
+    Type: String
+  TargetGroupArns:
+    Description: List Of ALB Target Group Arns
+    Type: String
+    Default: >-
+      arn:aws:elasticloadbalancing:eu-west-1:006896884733:targetgroup/TestTargetGroup/142007c26302678b
+  AutoScalingDesiredCapacity:
+    Description: The ideal target number of instances to keep active
+    Type: String
+    Default: '2'
+  AutoScalingMaxSize:
+    Description: The maximum number of instances available for scale out
+    Type: String
+    Default: '2'
+  AutoScalingMinSize:
+    Description: The minimum number of instances that must be active
+    Type: String
+    Default: '1'
+  AutoScalingName:
+    Description: Name of the autoscaling grouo
+    Type: String
+  VPCZoneIdentifier:
+    Description: >-
+      A list of subnet identifiers of desired VPC).  Values must be pipe
+      delimited - e.g. subnet1|subnet2
+    Type: String
+    Default: subnet-00f0e576|subnet-6d819509|subnet-d9471781
+  ScalingPolicyCoolDown:
+    Description: Time in seconds before further scaling actions can take place
+    Type: String
+    Default: '30'
+  ScalingPolicyCPUTargetValue:
+    Description: The target CPU value (as double) which the scaling group will try to maintain
+    Type: String
+    Default: '50.00'
+  LaunchTemplateKeyName:
+    Description: The SSH Key to use for connecting to the resulting SSH Instance
+    Type: String
+    Default: testinstance
+  LaunchTemplateName:
+    Description: Name of Launch Template
+    Type: String
+  LaunchTemplateImageId:
+    Description: The image id from which EC2 Instances will be launched
+    Type: String
+    Default: 'ami-0bdb1d6c15a40392c'
+  LaunchTemplateInstanceType:
+    Description: The EC2 Instance type to be used
+    Type: String
+    Default: 't2.nano'
+  LaunchTemplateSecurityGroups:
+    Description: The Security Groups to be applied to the EC2 instances.  This should be a pipe delimited string
+    Type: String
+    Default: 'sg-0894609036180b462'
+Resources:
+  AutoScalingGroup:
+    Type: 'AWS::AutoScaling::AutoScalingGroup'
+    Properties:
+      AutoScalingGroupName: !Ref AutoScalingName
+      Cooldown: !Ref AutoScalingCoolDown
+      DesiredCapacity: !Ref AutoScalingDesiredCapacity
+      HealthCheckGracePeriod: !Ref AutoScalingHealthCheckGracePeriod
+      HealthCheckType: ELB
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: '1'
+      TargetGroupARNs:
+        - !Ref TargetGroupArns
+      MaxSize: !Ref AutoScalingMaxSize
+      MinSize: !Ref AutoScalingMinSize
+      VPCZoneIdentifier: !Split
+        - '|'
+        - !Ref VPCZoneIdentifier
+      Tags:
+        - Key: Name
+          Value: AutoScaling Group Instance
+          PropagateAtLaunch: true
+      MetricsCollection:
+        - Granularity: 1Minute
+  LaunchTemplate:
+    Type: 'AWS::EC2::LaunchTemplate'
+    Properties:
+      LaunchTemplateName: !Ref LaunchTemplateName
+      LaunchTemplateData:
+        UserData: !Base64
+          'Fn::Join':
+            - ''
+            - - |
+                #!/bin/bash
+              - >
+                yum -y update && yum -y install httpd && service httpd restart
+                && cd /var/www/html/ && echo 'Test' > index.html
+        InstanceInitiatedShutdownBehavior: stop
+        BlockDeviceMappings:
+          - Ebs:
+              VolumeType: gp2
+              VolumeSize: 8
+              DeleteOnTermination: true
+            DeviceName: /dev/xvda
+        KeyName: !Ref LaunchTemplateKeyName
+        ImageId: !Ref LaunchTemplateImageId
+        InstanceType: !Ref LaunchTemplateInstanceType
+        SecurityGroupIds: !Split
+          - '|'
+          - !Ref LaunchTemplateSecurityGroups
+        Monitoring:
+          Enabled: true
+  ScalingPolicy:
+    Type: 'AWS::AutoScaling::ScalingPolicy'
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      PolicyType: TargetTrackingScaling
+      Cooldown: !Ref ScalingPolicyCoolDown
+      TargetTrackingConfiguration:
+        DisableScaleIn: false
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: !Ref ScalingPolicyCPUTargetValue
