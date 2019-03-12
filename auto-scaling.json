@@ -1,69 +1,192 @@
 {
-    "AWSTemplateFormatVersion" : "2010-09-09",
-
-
-  "Parameters" : {
-    "Ec2InstanceType" : {
-      "Description" : "EC2 Instance Type - e.g. t2.micro  ",
-      "Type" : "String",
-      "Default" : "t2.micro"
-
-    },
-
-    "Ec2KeyName" : {
-      "Description" : "EC2 Key Name",
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "AutoScalingCoolDown": {
+      "Description": "AutoScaling Cool Down",
       "Type": "String",
-      "Default" : "test"
+      "Default": "30"
     },
-
-    "Ec2AmiImageId" : {
-      "Description" : "Input the AMI ID you require",
-      "Type" : "String",
-      "Default" : "ami-e1768386"
-
+    "LifeCycleHookName": {
+      "Description": "Name for the AutoScaling LifeCycle Hook",
+      "Type": "String"
+    },
+    "TargetGroupArns": {
+      "Description": "List Of ALB Target Group Arns",
+      "Type": "String",
+      "Default": "arn:aws:elasticloadbalancing:eu-west-1:006896884733:targetgroup/TestTargetGroup/142007c26302678b"
+    },
+    "AutoScalingDesiredCapacity": {
+      "Description": "The ideal target number of instances to keep active",
+      "Type": "String",
+      "Default": "2"
+    },
+    "AutoScalingMaxSize": {
+      "Description": "The maximum number of instances available for scale out",
+      "Type": "String",
+      "Default": "2"
+    },
+    "AutoScalingMinSize": {
+      "Description": "The minimum number of instances that must be active",
+      "Type": "String",
+      "Default": "1"
+    },
+    "AutoScalingName": {
+      "Description": "Name of the autoscaling grouo",
+      "Type": "String"
+    },
+    "VPCZoneIdentifier": {
+      "Description": "A list of subnet identifiers of desired VPC).  Values must be pipe delimited - e.g. subnet1|subnet2",
+      "Type": "String",
+      "Default": "subnet-00f0e576|subnet-6d819509|subnet-d9471781"
+    },
+    "LaunchTemplateKeyName": {
+      "Description": "The SSH Key to use for connecting to the resulting SSH Instance",
+      "Type": "String",
+      "Default": "testinstance"
+    },
+    "LaunchTemplateName": {
+      "Description": "Name of Launch Template",
+      "Type": "String"
     }
   },
-
-
-
-  "Resources" : {
-
-        "autoScalingGroup" : {
-          "Type" : "AWS::AutoScaling::AutoScalingGroup",
-          "Properties" : {
-            "AutoScalingGroupName" : "test-autoscaling-group",
-            "AvailabilityZones" : [ "eu-west-2b"],
-            "Cooldown" : "30",
-            "DesiredCapacity" : "1",
-            "HealthCheckGracePeriod" : 10,
-            "HealthCheckType" : "EC2",
-            "LaunchTemplate" : LaunchTemplateSpecification,
-            "LifecycleHookSpecificationList" : [ LifecycleHookSpecification, ... ],
-            "LoadBalancerNames" : [ String, ... ],
-            "MaxSize" : String,
-            "MetricsCollection" : [ MetricsCollection, ... ],
-            "MinSize" : String,
-            "MixedInstancesPolicy" : MixedInstancesPolicy,
-            "NotificationConfigurations" : [ NotificationConfiguration, ... ],
-            "PlacementGroup" : String,
-            "ServiceLinkedRoleARN" : String,
-            "Tags" : [ TagProperty, ... ],
-            "TargetGroupARNs" : [ String, ... ],
-            "TerminationPolicies" : [ String, ... ],
-            "VPCZoneIdentifier" : [ String, ... ]
-          },
-          "DependsOn": "launchTemplate"
+  "Resources": {
+    "AutoScalingGroup": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "AutoScalingGroupName": {
+          "Ref": "AutoScalingName"
         },
+        "Cooldown": "30",
+        "DesiredCapacity": {
+          "Ref": "AutoScalingDesiredCapacity"
+        },
+        "HealthCheckGracePeriod": 600,
+        "HealthCheckType": "ELB",
+        "LaunchTemplate": {
+          "LaunchTemplateId": {
+            "Ref": "LaunchTemplate"
+          },
+          "Version": "1"
+        },
+        "TargetGroupARNs": [
+          {
+            "Ref": "TargetGroupArns"
+          }
+        ],
+        "MaxSize": {
+          "Ref": "AutoScalingMaxSize"
+        },
+        "MinSize": {
+          "Ref": "AutoScalingMinSize"
+        },
+        "VPCZoneIdentifier": {
+          "Fn::Split": [
+            "|",
+            {
+              "Ref": "VPCZoneIdentifier"
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "AutoScaling Group Instance",
+            "PropagateAtLaunch": true
+          }
+        ],
+        "MetricsCollection": [{
 
-
-    "launchTemplate": {
-      "Type" : "AWS::EC2::LaunchTemplate",
-      "Properties" : {
-        "LaunchTemplateName" : "pms_template",
-        "LaunchTemplateData" : LaunchTemplateData
+            "Granularity" : "1Minute"
+        }]
       }
+    },
+    "LaunchTemplate": {
+      "Type": "AWS::EC2::LaunchTemplate",
+      "Properties": {
+        "LaunchTemplateName": {
+          "Ref": "LaunchTemplateName"
+        },
+        "LaunchTemplateData": {
+          "UserData": {
+            "Fn::Base64": {
+              "Fn::Join": [
+                "",
+                [
+                  "#!/bin/bash \n",
+                  "yum -y update && yum -y install httpd && service httpd restart && cd /var/www/html/ && echo 'Test' > index.html \n"
+                ]
+              ]
+            }
+          },
+          "InstanceInitiatedShutdownBehavior": "stop",
+          "BlockDeviceMappings": [
+            {
+              "Ebs": {
+                "VolumeType": "gp2",
+                "VolumeSize": 8,
+                "DeleteOnTermination": true
+              },
+              "DeviceName": "/dev/xvda"
+            }
+          ],
+          "KeyName": {
+            "Ref": "LaunchTemplateKeyName"
+          },
+          "ImageId": "ami-0bdb1d6c15a40392c",
+          "InstanceType": "t2.nano",
+          "SecurityGroupIds": [
+            "sg-0894609036180b462"
+          ],
+          "Monitoring": {"Enabled":  true}
+        }
+      }
+    },
+    "ScalingPolicyScaleOut": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "AdjustmentType": "ChangeInCapacity",
+        "AutoScalingGroupName": {
+          "Ref": "AutoScalingGroup"
+        },
+        "PolicyType": "SimpleScaling",
+        "ScalingAdjustment": 1,
+        "Cooldown": "300"
+      }
+    },
 
+    "ScalingPolicyScaleIn": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "AdjustmentType": "ChangeInCapacity",
+        "AutoScalingGroupName": {
+          "Ref": "AutoScalingGroup"
+        },
+        "PolicyType": "SimpleScaling",
+        "ScalingAdjustment": -1,
+        "Cooldown": "300"
+      }
+    },
+
+    "ScaleOutAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "ActionsEnabled": true,
+        "AlarmActions": [
+          {"Ref": "ScalingPolicyScaleOut"}
+        ],
+        "AlarmDescription": "EC2 CPU average exceeding safe threshold",
+        "AlarmName": "EC2 CPU Too High",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "DatapointsToAlarm": 2,
+        "EvaluationPeriods": 4,
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/EC2",
+        "Period": 60,
+        "Statistic": "Average",
+        "Threshold": 20.00,
+        "TreatMissingData": "breaching",
+        "OKActions": [{"Ref": "ScalingPolicyScaleIn"}]
+      }
     }
   }
-
 }
