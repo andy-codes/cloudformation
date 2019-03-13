@@ -6,11 +6,14 @@ Parameters:
     Default: '30'
   AutoScalingHealthCheckGracePeriod:
     Description: Time in seconds before autoscaling starts checking EC2 Health
-    Type: Integer
+    Type: Number
     Default: 600
   LifeCycleHookName:
     Description: Name for the AutoScaling LifeCycle Hook
     Type: String
+  LifeCycleTimeout:
+    Description: The number of seconds until a lifecycle hook times out
+    Type: Number
   TargetGroupArns:
     Description: List Of ALB Target Group Arns
     Type: String
@@ -48,7 +51,7 @@ Parameters:
   LaunchTemplateKeyName:
     Description: The SSH Key to use for connecting to the resulting SSH Instance
     Type: String
-    Default: testinstance
+    Default: wtf2
   LaunchTemplateName:
     Description: Name of Launch Template
     Type: String
@@ -73,6 +76,11 @@ Resources:
       DesiredCapacity: !Ref AutoScalingDesiredCapacity
       HealthCheckGracePeriod: !Ref AutoScalingHealthCheckGracePeriod
       HealthCheckType: ELB
+      LifecycleHookSpecificationList:
+        - DefaultResult: ABANDON
+          HeartbeatTimeout: !Ref LifeCycleTimeout
+          LifecycleHookName: !Ref LifeCycleHookName
+          LifecycleTransition: autoscaling:EC2_INSTANCE_LAUNCHING
       LaunchTemplate:
         LaunchTemplateId: !Ref LaunchTemplate
         Version: '1'
@@ -94,14 +102,19 @@ Resources:
     Properties:
       LaunchTemplateName: !Ref LaunchTemplateName
       LaunchTemplateData:
-        UserData: !Base64
-          'Fn::Join':
-            - ''
-            - - |
+        UserData:
+          Fn::Base64:
+            Fn::Sub:
+              - |
                 #!/bin/bash
-              - >
+
                 yum -y update && yum -y install httpd && service httpd restart
-                && cd /var/www/html/ && echo 'Test' > index.html
+                cd /var/www/html/ && echo 'Test' > index.html
+                export LifeCycleHookName=${LifeCycleHookName}
+                export AutoScalingName=${LifeCycleHookName}
+                cd /home/ec2-user/ && echo $name > test.txt
+                echo 'wtf'
+              - LifeCycleHookName: !Ref LifeCycleHookName
         InstanceInitiatedShutdownBehavior: stop
         BlockDeviceMappings:
           - Ebs:
@@ -129,3 +142,16 @@ Resources:
         PredefinedMetricSpecification:
           PredefinedMetricType: ASGAverageCPUUtilization
         TargetValue: !Ref ScalingPolicyCPUTargetValue
+  Ec2IamPolicy:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        JSON object
+      ManagedPolicyArns:
+      - String
+      MaxSessionDuration: Integer
+      Path: String
+      PermissionsBoundary: String
+      Policies:
+      - Policies
+      RoleName: String
