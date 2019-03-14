@@ -116,6 +116,8 @@ Resources:
                 echo 'wtf'
               - LifeCycleHookName: !Ref LifeCycleHookName
         InstanceInitiatedShutdownBehavior: stop
+        IamInstanceProfile:
+          Name: !Ref InstanceProfile
         BlockDeviceMappings:
           - Ebs:
               VolumeType: gp2
@@ -143,15 +145,30 @@ Resources:
           PredefinedMetricType: ASGAverageCPUUtilization
         TargetValue: !Ref ScalingPolicyCPUTargetValue
   Ec2IamPolicy:
-    Type: AWS::IAM::Role
+    Type: "AWS::IAM::Role"
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+              - "ec2.amazonaws.com"
+            Action:
+            - "sts:AssumeRole"
+        Path: "/"
+        Policies:
+        - PolicyName: "AutoScalingPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+            - Effect: "Allow"
+              Action: "autoscaling:*"
+              Resource: "*"
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
     Properties:
-      AssumeRolePolicyDocument:
-        JSON object
-      ManagedPolicyArns:
-      - String
-      MaxSessionDuration: Integer
-      Path: String
-      PermissionsBoundary: String
-      Policies:
-      - Policies
-      RoleName: String
+      Path: "/"
+      Roles:
+       - !Ref Ec2IamPolicy
+      InstanceProfileName: AutoScalingInstanceProfile
