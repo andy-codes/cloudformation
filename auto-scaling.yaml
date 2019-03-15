@@ -146,18 +146,17 @@ Resources:
         TargetValue: !Ref ScalingPolicyCPUTargetValue
   Ec2IamPolicy:
     Type: "AWS::IAM::Role"
-      Properties:
-        AssumeRolePolicyDocument:
-          Version: "2012-10-17"
-          Statement:
-          - Effect: "Allow"
-            Principal:
-              Service:
-              - "ec2.amazonaws.com"
-            Action:
-            - "sts:AssumeRole"
-        Path: "/"
-        Policies:
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: "Allow"
+          Principal:
+            Service:
+            - "ec2.amazonaws.com"
+          Action:
+          - "sts:AssumeRole"
+      Policies:
         - PolicyName: "AutoScalingPolicy"
           PolicyDocument:
             Version: "2012-10-17"
@@ -165,6 +164,7 @@ Resources:
             - Effect: "Allow"
               Action: "autoscaling:*"
               Resource: "*"
+      RoleName: "EC2Auto-AutoScaling-Role"
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
