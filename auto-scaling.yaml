@@ -1,5 +1,20 @@
 AWSTemplateFormatVersion: 2010-09-09
 Parameters:
+  AutoScalingDesiredCapacity:
+    Description: The ideal target number of instances to keep active
+    Type: String
+    Default: '2'
+  AutoScalingMaxSize:
+    Description: The maximum number of instances available for scale out
+    Type: String
+    Default: '2'
+  AutoScalingMinSize:
+    Description: The minimum number of instances that must be active
+    Type: String
+    Default: '1'
+  AutoScalingName:
+    Description: Name of the autoscaling grouo
+    Type: String
   AutoScalingCoolDown:
     Description: AutoScaling Cool Down
     Type: String
@@ -19,21 +34,6 @@ Parameters:
     Type: String
     Default: >-
       arn:aws:elasticloadbalancing:eu-west-1:006896884733:targetgroup/TestTargetGroup/142007c26302678b
-  AutoScalingDesiredCapacity:
-    Description: The ideal target number of instances to keep active
-    Type: String
-    Default: '2'
-  AutoScalingMaxSize:
-    Description: The maximum number of instances available for scale out
-    Type: String
-    Default: '2'
-  AutoScalingMinSize:
-    Description: The minimum number of instances that must be active
-    Type: String
-    Default: '1'
-  AutoScalingName:
-    Description: Name of the autoscaling grouo
-    Type: String
   VPCZoneIdentifier:
     Description: >-
       A list of subnet identifiers of desired VPC).  Values must be pipe
